@@ -221,7 +221,6 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
     const [data, setData] = useState<AnalysisData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    // --- FIX: Change type from NodeJS.Timeout to number for browser compatibility ---
     const pollIntervalRef = useRef<number | null>(null);
 
     useEffect(() => {
@@ -374,4 +373,4 @@ const App: React.FC = () => {
     );
 };
 
-export default A
+export default App;
