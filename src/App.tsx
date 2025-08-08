@@ -116,10 +116,50 @@ const CategoryColumn: React.FC<{ category: Category; results: CVResult[]; totalC
     );
 };
 
-const Uploader: React.FC<{ onUploadSuccess: (submissionId: number) => void }> = ({ onUploadSuccess }) => {
+// --- MODIFIED: Toggles Component ---
+const Toggles: React.FC<{
+    isDarkMode: boolean;
+    isArabic: boolean;
+    toggleDarkMode: () => void;
+    toggleLanguage: () => void;
+}> = ({ isDarkMode, isArabic, toggleDarkMode, toggleLanguage }) => {
+    return (
+        // This container establishes the boundaries for positioning
+        <div className="fixed top-6 left-6 right-6 h-8 z-50">
+            {/* Language Toggle Wrapper - Always on the left */}
+            <div className="absolute top-0 left-0">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={isArabic} onChange={toggleLanguage} className="sr-only peer" />
+                    <div className="w-14 h-8 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-['EN'] after:absolute after:top-1 after:left-[4px] after:bg-white after:border after:border-gray-300 after:rounded-full after:h-6 after:w-6 after:transition-all after:text-slate-800 after:text-xs after:font-bold after:flex after:items-center after:justify-center peer-checked:after:content-['AR']"></div>
+                </label>
+            </div>
+            {/* Dark Mode Toggle Wrapper - Always on the right */}
+            <div className="absolute top-0 right-0">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked={isDarkMode} onChange={toggleDarkMode} className="sr-only peer" />
+                    <div className="w-14 h-8 bg-slate-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-['☀️'] after:absolute after:top-1 after:left-[4px] after:bg-white after:border after:border-gray-300 after:rounded-full after:h-6 after:w-6 after:transition-all after:flex after:items-center after:justify-center peer-checked:after:content-['🌙']"></div>
+                </label>
+            </div>
+        </div>
+    );
+};
+
+const Uploader: React.FC<{ onUploadSuccess: (submissionId: number) => void; isArabic: boolean; }> = ({ onUploadSuccess, isArabic }) => {
     const [files, setFiles] = useState<FileList | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    const uiText = {
+        title: isArabic ? "تحليل السير الذاتية" : "Upload & Analyze CVs",
+        keywordsLabel: isArabic ? "أدخل الكلمات المفتاحية" : "Enter Keywords",
+        keywordsPlaceholder: isArabic ? "مثال: بايثون، تحليل بيانات" : "e.g., Python, Data Analysis",
+        uploadLabel: isArabic ? "رفع السير الذاتية" : "Upload CVs",
+        uploadPlaceholder: isArabic ? "اسحب وأفلت الملفات أو انقر للاختيار" : "Drag & drop files here or click to select",
+        filesSelected: isArabic ? "ملفات تم اختيارها" : "file(s) selected",
+        submitButton: isArabic ? "تحليل وتقديم" : "Analyze and Submit",
+        submittingButton: isArabic ? "جاري التحليل..." : "Analyzing...",
+        fileError: isArabic ? "الرجاء اختيار ملف واحد على الأقل." : "Please select at least one file.",
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) setFiles(e.target.files);
@@ -128,7 +168,7 @@ const Uploader: React.FC<{ onUploadSuccess: (submissionId: number) => void }> = 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!files || files.length === 0) {
-            setError("Please select at least one file.");
+            setError(uiText.fileError);
             return;
         }
         setIsSubmitting(true);
@@ -152,24 +192,24 @@ const Uploader: React.FC<{ onUploadSuccess: (submissionId: number) => void }> = 
     };
 
     return (
-        <div className="w-full min-h-screen bg-slate-900 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="container mx-auto max-w-2xl p-8 bg-[#162447] rounded-2xl shadow-lg">
-                <h1 className="text-3xl font-bold text-white text-center mb-6">Upload & Analyze CVs</h1>
+        <div className="w-full min-h-screen flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="container mx-auto max-w-2xl p-8 pt-20 bg-[#162447] rounded-2xl shadow-lg relative">
+                <h1 className="text-3xl font-bold text-white text-center mb-6">{uiText.title}</h1>
                 <form id="cv-form" onSubmit={handleSubmit}>
                     <div className="mb-6">
-                        <label htmlFor="keywords" className="block text-lg font-semibold mb-2 text-slate-300">Enter Keywords</label>
-                        <input type="text" id="keywords" name="keywords" placeholder="e.g., Python, Data Analysis" className="w-full p-3 bg-[#2a3b5c] border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+                        <label htmlFor="keywords" className="block text-lg font-semibold mb-2 text-slate-300">{uiText.keywordsLabel}</label>
+                        <input type="text" id="keywords" name="keywords" placeholder={uiText.keywordsPlaceholder} className="w-full p-3 bg-[#2a3b5c] border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-sky-500 focus:outline-none" />
                     </div>
                     <div className="mb-6">
-                        <label htmlFor="cv-upload" className="block text-lg font-semibold mb-2 text-slate-300">Upload CVs</label>
+                        <label htmlFor="cv-upload" className="block text-lg font-semibold mb-2 text-slate-300">{uiText.uploadLabel}</label>
                         <label htmlFor="cv-upload" className="flex flex-col items-center justify-center w-full min-h-[150px] border-2 border-dashed border-slate-600 rounded-lg bg-[#1f2a51] text-center p-4 cursor-pointer hover:border-sky-500">
-                            <p className="text-slate-400">{files && files.length > 0 ? `${files.length} file(s) selected` : "Drag & drop files here or click to select"}</p>
+                            <p className="text-slate-400">{files && files.length > 0 ? `${files.length} ${uiText.filesSelected}` : uiText.uploadPlaceholder}</p>
                             <input type="file" id="cv-upload" name="files" className="hidden" accept=".pdf,.doc,.docx,.jpg,.png" multiple onChange={handleFileChange} />
                         </label>
                     </div>
                     {error && <p className="text-rose-400 text-center mb-4">{error}</p>}
                     <button type="submit" disabled={isSubmitting} className="w-full p-3 text-lg font-bold bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:bg-slate-500 disabled:cursor-not-allowed">
-                        {isSubmitting ? 'Analyzing...' : 'Analyze and Submit'}
+                        {isSubmitting ? uiText.submittingButton : uiText.submitButton}
                     </button>
                 </form>
             </motion.div>
@@ -184,18 +224,16 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
     const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        const POLLING_INTERVAL = 5000; // 5 seconds
-        const POLLING_TIMEOUT = 90000; // 90 seconds
+        const POLLING_INTERVAL = 5000;
+        const POLLING_TIMEOUT = 90000;
 
         const pollData = async () => {
             try {
                 const response = await fetch(`${API_ENDPOINT}/api/results/${submissionId}`);
                 if (!response.ok) {
-                    // Stop polling on server error
                     throw new Error(`Server responded with status ${response.status}`);
                 }
                 const result = await response.json();
-                // Check if backend has finished processing (even if 0 results)
                 if (result.status === 'success') {
                     setData(result);
                     setLoading(false);
@@ -208,20 +246,17 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
             }
         };
 
-        // Start polling immediately
         pollData();
         pollIntervalRef.current = setInterval(pollData, POLLING_INTERVAL);
 
-        // Set a timeout to stop polling after a certain duration
         const timeoutId = setTimeout(() => {
-            if (loading) { // If still loading after timeout
+            if (loading) {
                 setError("Analysis is taking longer than expected. Please try again later.");
                 setLoading(false);
                 if(pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             }
         }, POLLING_TIMEOUT);
 
-        // Cleanup function to clear interval and timeout on component unmount
         return () => {
             if(pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             clearTimeout(timeoutId);
@@ -240,7 +275,7 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
 
     if (loading) {
         return (
-            <div className="w-full min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
+            <div className="w-full min-h-screen flex flex-col items-center justify-center text-white">
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
                     <FileTextIcon className="text-5xl text-sky-400" />
                 </motion.div>
@@ -252,7 +287,7 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
     
     if (error) {
         return (
-            <div className="w-full min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white text-center p-4">
+            <div className="w-full min-h-screen flex flex-col items-center justify-center text-white text-center p-4">
                 <XCircleIcon className="text-5xl text-rose-500" />
                 <p className="mt-4 text-lg font-semibold">An Error Occurred</p>
                 <p className="text-slate-400 max-w-md">{error}</p>
@@ -264,7 +299,7 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
      }
 
     return (
-        <div className="w-full min-h-screen bg-slate-900 p-4 sm:p-6 lg:p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
             <Tooltip id="filename-tooltip" />
             <div className="max-w-7xl mx-auto">
                 <header className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -294,6 +329,8 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
 
 const App: React.FC = () => {
     const [submissionId, setSubmissionId] = useState<number | null>(null);
+    const [isDarkMode, setIsDarkMode] = useState(true);
+    const [isArabic, setIsArabic] = useState(false);
 
     const handleUploadSuccess = (id: number) => {
         setSubmissionId(id);
@@ -303,22 +340,36 @@ const App: React.FC = () => {
         setSubmissionId(null);
     }
 
+    const toggleDarkMode = () => setIsDarkMode(prev => !prev);
+    const toggleLanguage = () => setIsArabic(prev => !prev);
+
+    useEffect(() => {
+        document.body.className = isDarkMode ? 'dark-mode' : '';
+        document.documentElement.lang = isArabic ? 'ar' : 'en';
+        document.documentElement.dir = isArabic ? 'rtl' : 'ltr';
+    }, [isDarkMode, isArabic]);
+
     return (
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={submissionId ? 'dashboard' : 'uploader'}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-            >
-                {!submissionId ? (
-                    <Uploader onUploadSuccess={handleUploadSuccess} />
-                ) : (
-                    <Dashboard submissionId={submissionId} onReset={handleReset} />
-                )}
-            </motion.div>
-        </AnimatePresence>
+        <div className={`w-full min-h-screen ${isDarkMode ? 'bg-slate-900' : 'bg-slate-100'}`}>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={submissionId ? 'dashboard' : 'uploader'}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    {!submissionId ? (
+                        <>
+                            <Toggles isDarkMode={isDarkMode} isArabic={isArabic} toggleDarkMode={toggleDarkMode} toggleLanguage={toggleLanguage} />
+                            <Uploader onUploadSuccess={handleUploadSuccess} isArabic={isArabic} />
+                        </>
+                    ) : (
+                        <Dashboard submissionId={submissionId} onReset={handleReset} />
+                    )}
+                </motion.div>
+            </AnimatePresence>
+        </div>
     );
 };
 
