@@ -52,7 +52,6 @@ const Uploader: React.FC = () => {
     }
 
     try {
-      // FIX: Use the 'data' variable to show the success message from the server
       const { data, error } = await supabase.functions.invoke('process-cv', { body: formData });
       if (error) throw error;
       alert("Success! " + data.message);
