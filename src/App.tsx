@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tooltip } from 'react-tooltip';
 
@@ -58,7 +58,6 @@ const CATEGORY_CONFIG: Record<Category, { icon: React.ElementType; color: string
 
 // --- UI COMPONENTS ---
 const AnimatedCounter: React.FC<{ value: number; className?: string; isPercentage?: boolean }> = ({ value, className, isPercentage = false }) => {
-    // This component remains the same
     const [displayValue, setDisplayValue] = useState(0);
     useEffect(() => {
         const controls = { update: (latest: number) => setDisplayValue(parseFloat(latest.toFixed(isPercentage ? 1 : 0))) };
@@ -78,7 +77,6 @@ const AnimatedCounter: React.FC<{ value: number; className?: string; isPercentag
 };
 
 const CVCard: React.FC<{ result: CVResult }> = ({ result }) => (
-    // This component remains the same
     <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }} className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg hover:bg-slate-700">
         <div className="flex items-center gap-3 min-w-0">
             <FileTextIcon className="text-slate-400 flex-shrink-0" />
@@ -89,7 +87,6 @@ const CVCard: React.FC<{ result: CVResult }> = ({ result }) => (
 );
 
 const CategoryColumn: React.FC<{ category: Category; results: CVResult[]; totalCVs: number; }> = ({ category, results, totalCVs }) => {
-    // This component remains the same
     const config = CATEGORY_CONFIG[category];
     const percentage = totalCVs > 0 ? (results.length / totalCVs) * 100 : 0;
     return (
@@ -119,7 +116,6 @@ const CategoryColumn: React.FC<{ category: Category; results: CVResult[]; totalC
     );
 };
 
-// --- NEW UPLOADER COMPONENT ---
 const Uploader: React.FC<{ onUploadSuccess: (submissionId: number) => void }> = ({ onUploadSuccess }) => {
     const [files, setFiles] = useState<FileList | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -181,37 +177,56 @@ const Uploader: React.FC<{ onUploadSuccess: (submissionId: number) => void }> = 
     );
 };
 
-
-// --- NEW DASHBOARD COMPONENT ---
-const Dashboard: React.FC<{ submissionId: number }> = ({ submissionId }) => {
+const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ submissionId, onReset }) => {
     const [data, setData] = useState<AnalysisData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null);
+        const POLLING_INTERVAL = 5000; // 5 seconds
+        const POLLING_TIMEOUT = 90000; // 90 seconds
+
+        const pollData = async () => {
             try {
-                // Fetch data every 3 seconds until it's ready
-                const interval = setInterval(async () => {
-                    const response = await fetch(`${API_ENDPOINT}/api/results/${submissionId}`);
-                    if (response.ok) {
-                        const result = await response.json();
-                        if (result.results.length > 0) { // Check if analysis is complete
-                            setData(result);
-                            setLoading(false);
-                            clearInterval(interval);
-                        }
-                    }
-                }, 3000);
+                const response = await fetch(`${API_ENDPOINT}/api/results/${submissionId}`);
+                if (!response.ok) {
+                    // Stop polling on server error
+                    throw new Error(`Server responded with status ${response.status}`);
+                }
+                const result = await response.json();
+                // Check if backend has finished processing (even if 0 results)
+                if (result.status === 'success') {
+                    setData(result);
+                    setLoading(false);
+                    if(pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                }
             } catch (err: any) {
-                setError(err.message || "An error occurred.");
+                setError(err.message || "An error occurred while fetching results.");
                 setLoading(false);
+                if(pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             }
         };
-        fetchData();
-    }, [submissionId]);
+
+        // Start polling immediately
+        pollData();
+        pollIntervalRef.current = setInterval(pollData, POLLING_INTERVAL);
+
+        // Set a timeout to stop polling after a certain duration
+        const timeoutId = setTimeout(() => {
+            if (loading) { // If still loading after timeout
+                setError("Analysis is taking longer than expected. Please try again later.");
+                setLoading(false);
+                if(pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            }
+        }, POLLING_TIMEOUT);
+
+        // Cleanup function to clear interval and timeout on component unmount
+        return () => {
+            if(pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            clearTimeout(timeoutId);
+        };
+    }, [submissionId, loading]);
 
     const categorizedResults = useMemo<CategorizedResults>(() => {
         const initial: CategorizedResults = { Excellent: [], 'Very Good': [], Good: [], Unsuitable: [] };
@@ -235,7 +250,18 @@ const Dashboard: React.FC<{ submissionId: number }> = ({ submissionId }) => {
         );
     }
     
-    if (error) { /* ... error UI ... */ }
+    if (error) {
+        return (
+            <div className="w-full min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white text-center p-4">
+                <XCircleIcon className="text-5xl text-rose-500" />
+                <p className="mt-4 text-lg font-semibold">An Error Occurred</p>
+                <p className="text-slate-400 max-w-md">{error}</p>
+                <button onClick={onReset} className="mt-6 bg-sky-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors">
+                    Upload New CVs
+                </button>
+            </div>
+        );
+     }
 
     return (
         <div className="w-full min-h-screen bg-slate-900 p-4 sm:p-6 lg:p-8">
@@ -266,16 +292,17 @@ const Dashboard: React.FC<{ submissionId: number }> = ({ submissionId }) => {
     );
 };
 
-// --- MAIN APP COMPONENT (CONTROLLER) ---
 const App: React.FC = () => {
     const [submissionId, setSubmissionId] = useState<number | null>(null);
 
-    // This function will be called by the Uploader component on success
     const handleUploadSuccess = (id: number) => {
         setSubmissionId(id);
     };
+    
+    const handleReset = () => {
+        setSubmissionId(null);
+    }
 
-    // Render the Uploader or the Dashboard based on the state
     return (
         <AnimatePresence mode="wait">
             <motion.div
@@ -288,7 +315,7 @@ const App: React.FC = () => {
                 {!submissionId ? (
                     <Uploader onUploadSuccess={handleUploadSuccess} />
                 ) : (
-                    <Dashboard submissionId={submissionId} />
+                    <Dashboard submissionId={submissionId} onReset={handleReset} />
                 )}
             </motion.div>
         </AnimatePresence>
