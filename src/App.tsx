@@ -221,7 +221,8 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
     const [data, setData] = useState<AnalysisData | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    // --- FIX: Change type from NodeJS.Timeout to number for browser compatibility ---
+    const pollIntervalRef = useRef<number | null>(null);
 
     useEffect(() => {
         const POLLING_INTERVAL = 5000;
@@ -247,9 +248,9 @@ const Dashboard: React.FC<{ submissionId: number; onReset: () => void; }> = ({ s
         };
 
         pollData();
-        pollIntervalRef.current = setInterval(pollData, POLLING_INTERVAL);
+        pollIntervalRef.current = window.setInterval(pollData, POLLING_INTERVAL);
 
-        const timeoutId = setTimeout(() => {
+        const timeoutId = window.setTimeout(() => {
             if (loading) {
                 setError("Analysis is taking longer than expected. Please try again later.");
                 setLoading(false);
