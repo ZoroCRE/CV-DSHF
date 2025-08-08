@@ -14,7 +14,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ view }) => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
-        // Redirect to dashboard upon successful sign-in
         navigate("/dashboard");
       }
     });
@@ -30,7 +29,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ view }) => {
           appearance={{ theme: ThemeSupa }}
           theme="dark"
           view={view}
-          providers={['google', 'github']}
+          providers={[]} // FIX: Removed 'google' and 'github' to disable social logins
         />
       </div>
     </div>
